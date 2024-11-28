@@ -14,8 +14,7 @@ flowchart TD
     H --> |Valid| I[Generate Credential Hash]
     I --> J[Add Credential to Blockchain]
     J --> K[Update Chain]
-    K --> L[Broadcast Updata chain(Optional)]
+    K --> L[Broadcast Updata chain]
     L --> G
     M --> N[End]
-    
 ```
