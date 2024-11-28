@@ -1,4 +1,4 @@
-module sofeng
+module softeng
 
 go 1.23.2
 

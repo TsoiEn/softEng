@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/TsoiEn/Research-Group/Soft_Eng_Research/Blockchain_Core/chaincode/src/model" // Replace with the actual import path of your `model` package
+	"github.com/TsoiEn/softEng/Blockchain_Core/chaincode/src/model" // Replace with the actual import path of your `model` package
 )
 
 var studentChain = &model.StudentChain{}
