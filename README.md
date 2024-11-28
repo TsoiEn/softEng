@@ -9,13 +9,13 @@ flowchart TD
     C --> |No Chain| E[Create Genesis Block]
     D --> F[Validate Chain]
     E --> F
-    F --> G[Listen for Transactions]
-    G --> H[Validate Transactions]
-    H --> I[Add Transactions to Block]
-    I --> J[Mine Block]
-    J --> K[Add Block to Chain]
-    K --> L[Broadcast New Block]
-    L --> M[Update Chain]
-    M --> G
+    F --> G[Listen for Transactions / add credential]
+    G --> |Add Credential| H[Validate Credential]
+    H --> |Valid| I[Generate Credential Hash]
+    I --> J[Add Credential to Blockchain]
+    J --> K[Update Chain]
+    K --> L[Broadcast Updata chain(Optional)]
+    L --> G
     M --> N[End]
+    
 ```
