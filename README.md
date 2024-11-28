@@ -7,15 +7,15 @@ flowchart TD
     B --> C[Check for Existing Chain]
     C --> |Chain Exists| D[Load Chain]
     C --> |No Chain| E[Create Genesis Block]
-    D --> F[Validate Chain]
+    D --> F[Listen for Actions]
     E --> F
-    F --> G[Listen for Transactions]
-    G --> H[Validate Transactions]
-    H --> I[Add Transactions to Block]
-    I --> J[Mine Block]
-    J --> K[Add Block to Chain]
-    K --> L[Broadcast New Block]
-    L --> M[Update Chain]
-    M --> G
+    F --> G[Add New Student or Credential]
+    G --> |Add Student| H[Store Student in StudentChain]
+    G --> |Add Credential| I[Validate Credential]
+    I --> |Valid| J[Generate Credential Hash]
+    J --> K[Add Credential to Blockchain]
+    K --> L[Update Chain]
+    L --> M[Broadcast Updated Chain (Optional)]
+    M --> F
     M --> N[End]
 ```
