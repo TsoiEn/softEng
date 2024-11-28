@@ -11,6 +11,27 @@ type Admin struct {
 	Name    string `json:"name"`
 }
 
+func (a *Admin) AddNewStudent(id int, firstName, lastName string, birthDate time.Time, studentNum int, chain *StudentChain) (*Student, error) {
+	if chain.Students == nil {
+		chain.Students = make(map[int]*Student)
+	}
+
+	if _, exists := chain.Students[id]; exists {
+		return nil, fmt.Errorf("student with ID %d already exists", id)
+	}
+
+	student := &Student{
+		ID:        id,
+		FirstName: firstName,
+		LastName:  lastName,
+		BirthDate: birthDate,
+		StudentID: studentNum,
+	}
+
+	chain.Students[id] = student
+	return student, nil
+}
+
 // AddCredentialAdmin adds a new academic credential to the student's list of academic credentials
 func (a *Admin) AddCredentialAdmin(s *Student, credentialType CredentialType, issuer string, dateIssued time.Time) error {
 	// Check if the credential type is academic
