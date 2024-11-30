@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	model "github.com/TsoiEn/softEng/Blockchain_Core/chaincode/src/model"
 	"golang.org/x/exp/rand"
 )
 
@@ -25,6 +26,7 @@ type RaftNode struct {
 	CommitIndex   int
 	LastApplied   int
 	Peers         []string
+	BlockChain    []*model.Block
 	LeaderID      string
 	ElectionTimer *time.Timer
 	Mutex         sync.Mutex
@@ -157,4 +159,16 @@ func (node *RaftNode) sendHeartbeat(peer string) {
 	fmt.Printf("Heartbeat sent to peer %s\n", peer)
 }
 
-// count of recussions: 1
+func (node *RaftNode) ProposeBlock(block *model.Block) bool {
+	node.Mutex.Lock()
+	defer node.Mutex.Unlock()
+
+	// Simulate consensus (in a real Raft implementation, this would involve log replication).
+	if node.State == Leader {
+		node.BlockChain = append(node.BlockChain, block)
+		return true
+	}
+
+	// If not the leader, forward the block to the leader (simulate this for now).
+	return false
+}
