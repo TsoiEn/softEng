@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/TsoiEn/softEng/Blockchain_Core/chaincode/consensus" // Replace with the actual import path of your `consensus` package
 	"github.com/TsoiEn/softEng/Blockchain_Core/chaincode/src/model" // Replace with the actual import path of your `model` package
 )
 
@@ -175,4 +176,12 @@ func main() {
 	testStudentOperations()
 
 	fmt.Println("\nTesting completed.")
+
+	peers := []string{"Node1", "Node2", "Node3"}
+	node := consensus.NewRaftNode("Node1", peers)
+
+	fmt.Println("Starting Raft node...")
+	node.ResetElectionTimer()
+
+	select {}
 }
