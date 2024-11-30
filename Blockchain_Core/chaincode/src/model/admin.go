@@ -33,10 +33,10 @@ func (a *Admin) AddNewStudent(id int, firstName, lastName string, birthDate time
 }
 
 // AddCredentialAdmin adds a new academic credential to the student's list of academic credentials
-func (a *Admin) AddCredentialAdmin(s *Student, credentialType CredentialType, issuer string, dateIssued time.Time) error {
+func (a *Admin) AddCredentialAdmin(s *Student, credentialType CredentialType, issuer string, dateIssued time.Time) bool {
 	// Check if the credential type is academic
 	if credentialType != Academic {
-		return fmt.Errorf("only academic credentials can be added")
+		return false
 	}
 
 	// Create a new credential
@@ -48,7 +48,7 @@ func (a *Admin) AddCredentialAdmin(s *Student, credentialType CredentialType, is
 
 	// Validate the credential data
 	if err := ValidateCredentialData(&newCredential); err != nil {
-		return err
+		return false
 	}
 
 	// Generate and store the credential hash
@@ -56,7 +56,7 @@ func (a *Admin) AddCredentialAdmin(s *Student, credentialType CredentialType, is
 
 	// Add the credential to the student's list of credentials
 	s.Credentials = append(s.Credentials, &newCredential)
-	return nil
+	return true
 }
 
 // RevokeCredential revokes a credential of the student

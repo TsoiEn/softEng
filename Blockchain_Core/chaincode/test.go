@@ -21,8 +21,8 @@ func testAdminOperations() {
 	}
 	// Add a sample student manually to test (if not done elsewhere)
 	if _, exists := studentChain.Students[202013432]; !exists {
-		studentChain.Students[202013432] = &model.Student{
-			StudentID: 202013432,
+		studentChain.Students[202013433] = &model.Student{
+			StudentID: 202013433,
 			FirstName: "John",
 			LastName:  "Doe",
 			BirthDate: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -35,13 +35,14 @@ func testAdminOperations() {
 	}
 
 	// Simulate adding a new student
+	// Simulate adding a new student
 	fmt.Println("Testing AddNewStudent...")
-	newStudent := admin.AddNewStudent(202013432, "John", "Doe", time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), 1, studentChain)
-	if newStudent != nil {
+	newStudent, err := admin.AddNewStudent(202013432, "Mark", "Renee", time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), 1, studentChain)
+	if err == nil && newStudent != nil {
 		studentChain.Students[newStudent.StudentID] = newStudent
 		fmt.Println("AddNewStudent passed:", newStudent)
 	} else {
-		fmt.Println("AddNewStudent failed.")
+		fmt.Println("AddNewStudent failed. Error:", err)
 	}
 
 	// Display blockchain state after adding student
@@ -78,8 +79,8 @@ func testStudentOperations() {
 	}
 	// Add a sample student manually to test (if not done elsewhere)
 	if _, exists := studentChain.Students[202013432]; !exists {
-		studentChain.Students[202013432] = &model.Student{
-			StudentID: 202013432,
+		studentChain.Students[202013433] = &model.Student{
+			StudentID: 202013433,
 			FirstName: "John",
 			LastName:  "Doe",
 			BirthDate: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -87,7 +88,7 @@ func testStudentOperations() {
 	}
 
 	student := &model.Student{
-		StudentID:   202013432,
+		StudentID:   202013433,
 		FirstName:   "John",
 		LastName:    "Doe",
 		BirthDate:   time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -96,7 +97,7 @@ func testStudentOperations() {
 
 	// Simulate adding a credential by a student
 	fmt.Println("\nTesting AddCredential...")
-	studentID := "202013432"
+	studentID := "202013433"
 	cred := model.Credential{
 		Type:       model.NonAcademic,
 		Issuer:     "Certification Institute",
