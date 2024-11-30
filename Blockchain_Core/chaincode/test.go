@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/TsoiEn/softEng/Blockchain_Core/chaincode/consensus" // Replace with the actual import path of your `consensus` package
+	//"github.com/TsoiEn/softEng/Blockchain_Core/chaincode/src"
 	"github.com/TsoiEn/softEng/Blockchain_Core/chaincode/src/model" // Replace with the actual import path of your `model` package
 )
 
@@ -167,7 +169,33 @@ func displayBlockchainState(blockchain *model.BlockChain) {
 }
 
 func main() {
-	fmt.Println("Running tests for admin and student operations...")
+	// test consensus
+	node1 := consensus.NewRaftNode("node1", []string{"node2", "node3"})
+	err := node1.Start()
+	if err != nil {
+		log.Fatalf("Failed to start node: %v", err)
+	}
+
+	// Manually set node1 as the leader (for testing purposes)
+	node1.State = consensus.Leader
+	fmt.Println("Node1 is now the leader.")
+
+	// Now you can propose the genesis block
+	genesisBlock := &model.Block{
+		Index:     0,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Data:      []byte("Genesis Block"),
+		PrevHash:  nil,
+	}
+
+	success := node1.ProposeBlock(genesisBlock)
+	if !success {
+		fmt.Println("Error proposing genesis block")
+	} else {
+		fmt.Println("Genesis block proposed successfully.")
+	}
+
+	fmt.Println("\nRunning tests for admin and student operations...")
 
 	// Run admin operations tests
 	testAdminOperations()
@@ -177,11 +205,29 @@ func main() {
 
 	fmt.Println("\nTesting completed.")
 
-	peers := []string{"Node1", "Node2", "Node3"}
-	node := consensus.NewRaftNode("Node1", peers)
+	// test purposes
 
-	fmt.Println("Starting Raft node...")
-	node.ResetElectionTimer()
+	// nodeID := "node1"
+	// peers := []string{"node2", "node3"}
+	// blockchain := src.NewBlockchain(nodeID, peers)
 
-	select {}
+	// // Initialize the ledger with a genesis block.
+	// err = blockchain.InitLedger()
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// // Example of adding a block.
+	// err = blockchain.CreateBlock("First block data")
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// peers := []string{"Node1", "Node2", "Node3"}
+	// node := consensus.NewRaftNode("Node1", peers)
+
+	// fmt.Println("Starting Raft node...")
+	// node.ResetElectionTimer()
+
+	// select {}
 }

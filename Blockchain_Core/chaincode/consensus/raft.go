@@ -1,7 +1,7 @@
 package consensus
 
 import (
-	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -30,6 +30,8 @@ type RaftNode struct {
 	LeaderID      string
 	ElectionTimer *time.Timer
 	Mutex         sync.Mutex
+	electionChan  chan bool
+	heartbeat     time.Duration
 }
 
 type Block struct {
@@ -41,6 +43,7 @@ type Block struct {
 }
 
 func NewRaftNode(nodeID string, peers []string) *RaftNode {
+	// Initialize the Raft node
 	node := &RaftNode{
 		NodeID:      nodeID,
 		State:       Follower,
@@ -52,123 +55,136 @@ func NewRaftNode(nodeID string, peers []string) *RaftNode {
 		Peers:       peers,
 		LeaderID:    "",
 	}
+
+	// Create and append the genesis block
+	genesisBlock := &model.Block{
+		Index:     0,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Data:      []byte("Genesis Block"),
+		PrevHash:  nil,
+	}
+	genesisBlock.DeriveHash()
+	node.BlockChain = append(node.BlockChain, genesisBlock)
+
+	log.Printf("Node %s: Genesis block created with hash: %x", nodeID, genesisBlock.Hash)
+
 	node.ResetElectionTimer()
 	return node
 }
 
-func (node *RaftNode) ResetElectionTimer() {
-	node.Mutex.Lock()
-	defer node.Mutex.Unlock()
-	if node.ElectionTimer != nil {
-		node.ElectionTimer.Stop()
+func (rn *RaftNode) ResetElectionTimer() {
+	rn.Mutex.Lock()
+	defer rn.Mutex.Unlock()
+
+	if rn.ElectionTimer != nil {
+		rn.ElectionTimer.Stop()
 	}
-	node.ElectionTimer = time.AfterFunc(time.Duration(150+rand.Intn(150))*time.Millisecond, func() {
-		node.startElection()
+	rn.ElectionTimer = time.AfterFunc(rn.getRandomElectionTimeout(), func() {
+		rn.startElection()
 	})
 }
 
-func (node *RaftNode) startElection() {
-	node.Mutex.Lock()
-	defer node.Mutex.Unlock()
-	node.State = Candidate
-	node.CurrentTerm++
-	node.VotedFor = node.NodeID
-	votes := 1
+func (rn *RaftNode) getRandomElectionTimeout() time.Duration {
+	return 150*time.Millisecond + time.Duration(rand.Intn(150))*time.Millisecond
+}
 
-	fmt.Printf("Node %s starts election for term %d\n", node.NodeID, node.CurrentTerm)
+func (rn *RaftNode) Start() error {
+	rn.Mutex.Lock()
+	defer rn.Mutex.Unlock()
 
-	// Request votes from peers
-	for _, peer := range node.Peers {
-		go func(peer string) {
-			// Simulated RPC call for RequestVote
-			success := node.requestVote(peer)
-			if success {
-				node.Mutex.Lock()
-				votes++
-				if votes > len(node.Peers)/2 && node.State == Candidate {
-					node.becomeLeader()
+	// Initialize node state
+	rn.State = Follower
+	rn.CurrentTerm = 0
+	rn.VotedFor = ""
+
+	log.Printf("Node %s initialized as Follower", rn.NodeID)
+
+	go rn.startElectionTimer()
+
+	return nil
+}
+
+func (rn *RaftNode) startElection() {
+	rn.Mutex.Lock()
+	rn.State = Candidate
+	rn.CurrentTerm++
+	rn.VotedFor = rn.NodeID
+	rn.Mutex.Unlock()
+
+	log.Printf("Node %s: Transitioned to Candidate for term %d.", rn.NodeID, rn.CurrentTerm)
+
+	// Simulate requesting votes from peers
+	voteCount := 1 // Vote for self
+
+	for _, peer := range rn.Peers {
+		go func(peerID string) {
+			if rn.requestVote(peerID) {
+				rn.Mutex.Lock()
+				voteCount++
+				if voteCount > len(rn.Peers)/2 {
+					rn.becomeLeader()
 				}
-				node.Mutex.Unlock()
+				rn.Mutex.Unlock()
 			}
 		}(peer)
 	}
 }
 
-func (node *RaftNode) becomeLeader() {
-	node.State = Leader
-	node.LeaderID = node.NodeID
-	fmt.Printf("Node %s became the leader for term %d\n", node.NodeID, node.CurrentTerm)
-	// Send heartbeat to maintain leadership
-	go node.sendHeartbeats()
+func (rn *RaftNode) startElectionTimer() {
+	for {
+		// Randomize election timeout to reduce split votes.
+		timeout := rn.getRandomElectionTimeout()
 
-	// Example call to appendEntries to avoid unused function error
-	node.appendEntries([]Block{
-		{Index: 1, Data: "Initial entry", Timestamp: time.Now()},
-	})
+		select {
+		case <-time.After(timeout):
+			// No heartbeat received; start an election.
+			log.Printf("Node %s: Election timeout reached. Starting election.", rn.NodeID)
+			rn.startElection()
+		case <-rn.electionChan:
+			// Received heartbeat or reset signal; continue as Follower.
+			log.Printf("Node %s: Election timer reset.", rn.NodeID)
+		}
+	}
 }
 
-func (node *RaftNode) requestVote(peer string) bool {
-	// Simulated logic for requesting a vote
-	// In a real system, this would be a network call
-	fmt.Printf("Node %s requests vote from %s\n", node.NodeID, peer)
+func (rn *RaftNode) requestVote(peerID string) bool {
+	log.Printf("Node %s: Requesting vote from %s", rn.NodeID, peerID)
+	time.Sleep(50 * time.Millisecond)
 	return true
 }
 
-func (node *RaftNode) appendEntries(entries []Block) bool {
-	node.Mutex.Lock()
-	defer node.Mutex.Unlock()
+func (rn *RaftNode) becomeLeader() {
+	rn.Mutex.Lock()
+	defer rn.Mutex.Unlock()
 
-	if node.State != Leader {
+	rn.State = Leader
+	rn.LeaderID = rn.NodeID
+
+	log.Printf("Node %s became the leader for term %d.", rn.NodeID, rn.CurrentTerm)
+
+	// Start sending heartbeats
+	go rn.sendHeartbeats()
+}
+
+func (rn *RaftNode) sendHeartbeats() {
+	for rn.State == Leader {
+		log.Printf("Leader %s: Sending heartbeats.", rn.NodeID)
+		time.Sleep(rn.heartbeat)
+	}
+}
+
+func (rn *RaftNode) ProposeBlock(block *model.Block) bool {
+	rn.Mutex.Lock()
+	defer rn.Mutex.Unlock()
+
+	if rn.State != Leader {
+		log.Printf("Node %s: Cannot propose block as it is not the leader", rn.NodeID)
 		return false
 	}
 
-	// Append entries to log and replicate to peers
-	node.Log = append(node.Log, entries...)
-	fmt.Printf("Leader %s appended entries and replicated to peers\n", node.NodeID)
+	// Append the block to the local blockchain
+	rn.BlockChain = append(rn.BlockChain, block)
 
-	for _, peer := range node.Peers {
-		go func(peer string) {
-			node.replicateLog(peer)
-		}(peer)
-	}
-
+	log.Printf("Node %s: Block proposed successfully", rn.NodeID)
 	return true
-}
-
-func (node *RaftNode) replicateLog(peer string) {
-	// Simulated logic for log replication
-	fmt.Printf("Replicating log to peer %s\n", peer)
-	// Assume successful replication
-}
-
-func (node *RaftNode) sendHeartbeats() {
-	for node.State == Leader {
-		fmt.Printf("Leader %s sending heartbeats\n", node.NodeID)
-		for _, peer := range node.Peers {
-			go func(peer string) {
-				// Simulated RPC call for heartbeat
-				node.sendHeartbeat(peer)
-			}(peer)
-		}
-		time.Sleep(50 * time.Millisecond) // Send heartbeats periodically
-	}
-}
-
-func (node *RaftNode) sendHeartbeat(peer string) {
-	// Simulated logic for heartbeat
-	fmt.Printf("Heartbeat sent to peer %s\n", peer)
-}
-
-func (node *RaftNode) ProposeBlock(block *model.Block) bool {
-	node.Mutex.Lock()
-	defer node.Mutex.Unlock()
-
-	// Simulate consensus (in a real Raft implementation, this would involve log replication).
-	if node.State == Leader {
-		node.BlockChain = append(node.BlockChain, block)
-		return true
-	}
-
-	// If not the leader, forward the block to the leader (simulate this for now).
-	return false
 }

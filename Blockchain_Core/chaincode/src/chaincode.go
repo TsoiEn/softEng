@@ -15,18 +15,20 @@ type Blockchain struct {
 
 // Initialize the blockchain with a genesis block.
 func (bc *Blockchain) InitLedger() error {
-	// Step 1: Create the genesis block.
+	// Create the genesis block.
 	genesisBlock := model.CreateBlock(1, []byte("Genesis Block"), []byte(""))
 
-	// Step 2: Propose the genesis block via Raft.
+	// Use Raft to propose the genesis block.
+	if bc.RaftNode == nil {
+		return fmt.Errorf("RaftNode is not initialized")
+	}
+
 	success := bc.RaftNode.ProposeBlock(genesisBlock)
 	if !success {
 		return fmt.Errorf("failed to propose genesis block via Raft")
 	}
 
-	// Step 3: Append the genesis block after consensus.
-	bc.Blocks = append(bc.Blocks, genesisBlock)
-	log.Printf("Genesis block initialized via Raft: %+v", genesisBlock)
+	log.Printf("Genesis block initialized: %+v", genesisBlock)
 	return nil
 }
 
@@ -36,7 +38,6 @@ func (bc *Blockchain) CreateBlock(data string) error {
 	if len(bc.Blocks) == 0 {
 		return fmt.Errorf("blockchain is not initialized")
 	}
-
 	// Step 1: Get the last block.
 	lastBlock := bc.Blocks[len(bc.Blocks)-1]
 
@@ -53,4 +54,19 @@ func (bc *Blockchain) CreateBlock(data string) error {
 	bc.Blocks = append(bc.Blocks, newBlock)
 	log.Printf("New block added via Raft: %+v", newBlock)
 	return nil
+}
+
+func NewBlockchain(nodeID string, peers []string) *Blockchain {
+	raftNode := consensus.NewRaftNode(nodeID, peers)
+
+	// Start Raft node
+	err := raftNode.Start()
+	if err != nil {
+		log.Fatalf("Failed to start Raft node: %v", err)
+	}
+
+	return &Blockchain{
+		Blocks:   []*model.Block{},
+		RaftNode: raftNode,
+	}
 }
