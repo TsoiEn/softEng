@@ -18,6 +18,30 @@ flowchart TD
     L --> G
     L --> M[End]
 ```
+```mermaid
+flowchart TD
+    A[Start] --> B[Initialize Raft Node]
+    B --> C[Create Genesis Block]
+    C --> D[Start Election Timer]
+    D --> E[Check if Leader]
+    E --> |Yes| F[Send Heartbeats]
+    E --> |No| G[Wait for Election Timeout]
+    G --> H[Start Election]
+    H --> I[Request Votes from Peers]
+    I --> J[Votes Received]
+    J --> |Majority Votes| K[Become Leader]
+    J --> |Not Majority| G
+    K --> L[Send Heartbeats as Leader]
+    L --> F
+    F --> M[Propose Block]
+    M --> |Leader| N[Append Block to Blockchain]
+    N --> O[Broadcast Block]
+    O --> L
+    L --> P[End]
+
+```
+
+
 
 current directory
 
